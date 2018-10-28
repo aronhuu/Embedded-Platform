@@ -17,6 +17,7 @@
 */
 
 #include "MMA8451Q.h"
+#include "communications.h"
 
 #define REG_WHO_AM_I      0x0D
 #define REG_CTRL_REG_1    0x2A
@@ -26,7 +27,7 @@
 
 #define UINT14_MAX        16383
 
-MMA8451Q::MMA8451Q(PinName sda, PinName scl, int addr) : m_i2c(sda, scl), m_addr(addr) {
+MMA8451Q::MMA8451Q(int addr) : m_addr(addr) {
     // activate the peripheral
     uint8_t data[2] = {REG_CTRL_REG_1, 0x01};
     writeRegs(data, 2);
@@ -72,10 +73,10 @@ int16_t MMA8451Q::getAccAxis(uint8_t addr) {
 
 void MMA8451Q::readRegs(int addr, uint8_t * data, int len) {
     char t[1] = {addr};
-    m_i2c.write(m_addr, t, 1, true);
-    m_i2c.read(m_addr, (char *)data, len);
+    i2c.write(m_addr, t, 1, true);
+    i2c.read(m_addr, (char *)data, len);
 }
 
 void MMA8451Q::writeRegs(uint8_t * data, int len) {
-    m_i2c.write(m_addr, (char *)data, len);
+    i2c.write(m_addr, (char *)data, len);
 }

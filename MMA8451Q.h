@@ -21,6 +21,7 @@
 
 #include "mbed.h"
 
+
 /**
 * MMA8451Q accelerometer example
 *
@@ -52,11 +53,9 @@ public:
   /**
   * MMA8451Q constructor
   *
-  * @param sda SDA pin
-  * @param sdl SCL pin
   * @param addr addr of the I2C peripheral
   */
-  MMA8451Q(PinName sda, PinName scl, int addr);
+  MMA8451Q(int addr);
 
   /**
   * MMA8451Q destructor
@@ -99,7 +98,6 @@ public:
   void getAccAllAxis(float * res);
 
 private:
-  I2C m_i2c;
   int m_addr;
   void readRegs(int addr, uint8_t * data, int len);
   void writeRegs(uint8_t * data, int len);
