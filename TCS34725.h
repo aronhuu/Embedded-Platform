@@ -12,13 +12,13 @@
 #define ADC_GAIN_REG 						0x8F
 #define GAIN_X1 								0x00 // x1 gain
 #define ENA_REG									0x80 //Access to enable register
-#define ENA_MODE_3							0x03 //RGBC enable, INterrut disabled and oscillator enabled
+#define ENA_MODE_3							0x03 //RGBC enable, Interrut disabled and oscillator enabled
 #define RGBC_1REG								0x94 //The direction of the first register address
 
 
 class TCS34725{
 	private:
-			uint8_t  rx_buff[8];
+			char  rx_buff[8];
 			uint8_t  tx_buff[2];
 	
 			int red, green, blue, clear;

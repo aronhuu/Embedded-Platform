@@ -9,7 +9,8 @@ Thread threadI2C(osPriorityNormal); // 1K stack size
 #define MMA8451_I2C_ADDRESS (0x1d<<1)
 
 //Declare the global vars needed for communication with main thread
-float temperature, humidity, accX, accY, accZ, clear, red, green, blue;
+float temperature, humidity, accX, accY, accZ;
+int clear, red, green, blue;
 
 void i2c_thread(); 
 
@@ -17,6 +18,8 @@ bool flagColorSensor = false, flagTHSensor = false;
 
 //DigitalOut ledColorSensor(PA_2);
 
+//Interrupt handler
+void button_handler();
 
 void i2c_thread() {
 		
