@@ -10,7 +10,7 @@ Thread threadI2C(osPriorityNormal); // 1K stack size
 
 //Declare the global vars needed for communication with main thread
 float temperature, humidity, accX, accY, accZ;
-int clear, red, green, blue;
+int delayThreadI2C, clear, red, green, blue;
 
 void i2c_thread(); 
 
@@ -73,7 +73,7 @@ void i2c_thread() {
 			}
 			
 				
-			Thread::wait(200);
+			Thread::wait(delayThreadI2C*1000);
 				  
     }
 }
