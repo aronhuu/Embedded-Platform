@@ -30,13 +30,13 @@ extern EventFlags event;
 extern Thread threadANALOG;
 extern Thread threadI2C;
 extern Thread threadGNSS;
-//extern Thread threadLimits;
+extern Thread threadLimits;
 
 //Code of the extern threads
 extern void ANALOG_thread();
 extern void i2c_thread();
 extern void gnss_thread();
-//extern void limits_thread();
+extern void limits_thread();
 
 //Values of the sensors
 extern float valueSM, valueLS, temperature, humidity, accX, accY, accZ, lon, lat, hDop, height, geoide, UTCtime;
@@ -118,7 +118,7 @@ int main() {
 	threadI2C.start(i2c_thread);
 	threadANALOG.start(ANALOG_thread);
 	threadGNSS.start(gnss_thread);
-	//threadLimits.start(limits_thread);
+	threadLimits.start(limits_thread);
 	
 	pc.printf("Start the monitorization\n\r");
 	
@@ -152,6 +152,7 @@ int main() {
 				delayThreadI2C = WAIT_TEST_MODE;
 				//desactivate the timeout
 				to.detach();
+				event.clear();
 				break;
 			case ADVANCED:
 				state = TEST;
@@ -165,6 +166,8 @@ int main() {
 			flagChangeState = OFF;
 		}
 		
+		//Clear the screen
+		pc.printf(CLEAR_SCREEN);
 		
 		//TEMPERATURE AND HUMIDITY
 		pc.printf("Temp: %0.5f C, RH: %0.5f\r\n", temperature , humidity );
@@ -362,30 +365,21 @@ void UTC2LocalTime(){
 
 
 void checkLimits(){
-	//uint32_t flags = 0x0;
+	uint32_t flagsLimits = 0x0;
 	
-	if ((temperature >= MAX_TEMP) || (temperature <= MIN_TEMP)){ RGB = RED_ON; pc.printf(COLOR_ANSI_RED "Temperature out of limits" COLOR_RESET "\r\n");}			
-	if ((humidity >= MAX_HUM) || (humidity <= MIN_HUM)) {RGB = GREEN_ON;  pc.printf(COLOR_ANSI_GREEN "Humidity out of limits" COLOR_RESET "\r\n");}
-			if ((valueSM >= MAX_MOIS) || (valueSM < MIN_MOIS)) {RGB = BLUE_ON;  pc.printf(COLOR_ANSI_BLUE "Moisture out of limits" COLOR_RESET "\r\n");}
-			if ((valueLS >= MAX_LIGHT) || (valueLS <= MIN_LIGHT)) {RGB = YELLOW_ON;  pc.printf(COLOR_ANSI_YELLOW "Light out of limits" COLOR_RESET "\r\n");}
+	if ((temperature >= MAX_TEMP) || (temperature <= MIN_TEMP)){pc.printf(COLOR_ANSI_RED "Temperature out of limits" COLOR_RESET "\r\n"); flagsLimits+=2;}			
+	if ((humidity >= MAX_HUM) || (humidity <= MIN_HUM)) {pc.printf(COLOR_ANSI_GREEN "Humidity out of limits" COLOR_RESET "\r\n"); flagsLimits+=4;}
+			if ((valueSM >= MAX_MOIS) || (valueSM < MIN_MOIS)) {pc.printf(COLOR_ANSI_BLUE "Moisture out of limits" COLOR_RESET "\r\n"); flagsLimits+=8;}
+			if ((valueLS >= MAX_LIGHT) || (valueLS <= MIN_LIGHT)) {pc.printf(COLOR_ANSI_YELLOW "Light out of limits" COLOR_RESET "\r\n"); flagsLimits+=16;}
 			if ((clear >= MAX_COLOR) || (clear <= MIN_COLOR) || 
 					(red >= MAX_COLOR) || (red <= MIN_COLOR) ||
 					(blue >= MAX_COLOR) || (blue <= MIN_COLOR) ||
-					(green >= MAX_COLOR) || (green <= MIN_COLOR))  {RGB = MAGENTA_ON; pc.printf(COLOR_ANSI_MAGENTA "Color out of limits" COLOR_RESET "\r\n");}
+					(green >= MAX_COLOR) || (green <= MIN_COLOR))  {pc.printf(COLOR_ANSI_MAGENTA "Color out of limits" COLOR_RESET "\r\n"); flagsLimits+=32;}
 			if ((accX >= MAX_ACC) || (accX <= MIN_ACC) ||
 					(accY >= MAX_ACC) || (accY <= MIN_ACC) ||
-					(accZ >= MAX_ACC) || (accZ <= MIN_ACC) ) {RGB = CYAN_ON;  pc.printf(COLOR_ANSI_CYAN "Acceleration out of limits" COLOR_RESET "\r\n");}
+					(accZ >= MAX_ACC) || (accZ <= MIN_ACC) ) {pc.printf(COLOR_ANSI_CYAN "Acceleration out of limits" COLOR_RESET "\r\n"); flagsLimits+=64;}
 	
-	/*
-	if ((temperature >= MAX_TEMP) || (temperature <= MIN_TEMP)) flags+=2;
-			if ((humidity >= MAX_HUM) || (humidity <= MIN_HUM)) flags+=4;
-			if ((valueSM >= MAX_MOIS) || (valueSM < MIN_MOIS)) flags+=8;
-			if ((valueLS >= MAX_LIGHT) || (valueLS <= MIN_LIGHT)) flags+=16;
-			if ((clear >= MAX_COLOR) || (clear <= MIN_COLOR) || 
-					(red >= MAX_COLOR) || (red <= MIN_COLOR) ||
-					(blue >= MAX_COLOR) || (blue <= MIN_COLOR) ||
-					(green >= MAX_COLOR) || (green <= MIN_COLOR)) flags+=32;
-	*/
-	//if (flags != 0) flags += 1;
-	//event.set(0x01);
+	if (flagsLimits != 0) flagsLimits += 1;
+	event.clear();
+	event.set(flagsLimits);
 }

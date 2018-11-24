@@ -54,5 +54,8 @@
 #define COLOR_ANSI_BLUE "\x1b[34m"
 #define COLOR_ANSI_MAGENTA "\x1b[35m"
 #define COLOR_ANSI_CYAN "\x1b[36m"
+#define CLEAR_SCREEN "\033[2J\033[1;1H"
+
+#define DEFAULT_WAIT_TIME_TL 1000
 
 #endif
