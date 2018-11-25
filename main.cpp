@@ -18,7 +18,7 @@ DigitalOut normalModeLed(PA_5);
 DigitalOut testModeLed(PB_5);
 DigitalOut advancedModeLed(PB_6);
 
-//TIcker to present the information every hour
+//Ticker to present the information every hour
 Ticker to;
 
 //Eventflag
@@ -69,9 +69,9 @@ int flagChangeState;
 int flagPresentNomalModeInfo;
 
 
-/**** METHODS ****/
+/**** FUNCTIONS ****/
 
-//Method to select the dominat Color
+//Function to select the dominat Color
 int selectDominantColor();
 
 //States
@@ -89,7 +89,7 @@ void hour_handler();
 //To determine the dominant color
 int dominantColorCalculator(int data[]);
 
-//To calculate the parameter that are needed when the machine is in NORMAL mode
+//To calculate the parameters that are needed when the machine is in NORMAL mode
 void calculate(float data[], float *mean, float *max, float *min);
 
 //To set the hardware and internal conditions of the state machine for the initial state
@@ -99,7 +99,8 @@ void setInitialState();
 void UTC2LocalTime();
 
 //To check the limits of the values
-void checkLimits();
+void checkLimits();//Advanced mode: with colours
+void checkLimitsNM();//Normal mode
 
 /***** MAIN THREAD: main() runs in its own thread in the OS *****/
 
@@ -138,10 +139,16 @@ int main() {
 				delayThreadI2C = WAIT_NORMAL_MODE;
 				//Restar the counter of the arrays
 				ind = 0;
-				//Set the timeout 
+				//Set the ticker 
 				to.attach(hour_handler, MEASUREMENTS_PERIOD);
 				break;
 			case NORMAL: 
+				state = ADVANCED;
+				testModeLed = OFF;
+				normalModeLed = OFF;
+				advancedModeLed = ON;
+				break;
+			case ADVANCED:
 				state = TEST;
 				testModeLed = ON;
 				normalModeLed = OFF;
@@ -150,15 +157,9 @@ int main() {
 				delayThreadAnalog = WAIT_TEST_MODE;
 				delayThreadGNSS = WAIT_TEST_MODE;
 				delayThreadI2C = WAIT_TEST_MODE;
-				//desactivate the timeout
+				//desactivate the ticker
 				to.detach();
 				event.clear();
-				break;
-			case ADVANCED:
-				state = TEST;
-				testModeLed = ON;
-				normalModeLed = OFF;
-				advancedModeLed = OFF;
 				break;
 			default:
 				break;
@@ -166,8 +167,10 @@ int main() {
 			flagChangeState = OFF;
 		}
 		
-		//Clear the screen
-		pc.printf(CLEAR_SCREEN);
+		//If the mode is advanced clear the screen
+		if (state == ADVANCED) {
+			pc.printf(CLEAR_SCREEN);
+		}
 		
 		//TEMPERATURE AND HUMIDITY
 		pc.printf("Temp: %0.5f C, RH: %0.5f\r\n", temperature , humidity );
@@ -191,7 +194,7 @@ int main() {
 		//GNSS Receiver
 		UTC2LocalTime();
 		pc.printf("LocalTime: %d:%d:%d, Latitude: %0.5f, Longitud: %0.5f, hdop: %0.1f, Altura: %0.3f, geoide: %0.3f\r\n",hour, minutes, seconds, lat, lon, hDop, height, geoide);
-		//If there is fix: print I am here
+		//If there is fix: print google link with the current position
 		if (lat != 0){
 			pc.printf("I am here: https://maps.google.com/?q=%.5f,%.5f\r\n\n", lat, lon);
 		}
@@ -199,11 +202,21 @@ int main() {
 			pc.printf("NO FIX DATA\r\n\n");
 		}
 		
-		if (state == TEST){
-			pc.printf("Current state: TEST\r\n");
-		}
-		if (state == NORMAL){
-			pc.printf("Current state: NORMAL\r\n");
+		
+		switch(state){
+			case TEST:
+				pc.printf("Current state: TEST\r\n");
+				break;
+			case NORMAL:
+				pc.printf("Current state: NORMAL\r\n\n");
+				//Check the limits of parameters	
+				checkLimitsNM();
+				break;
+			case ADVANCED:
+				pc.printf("Current state: ADVANCED\r\n\n");
+				//Check the limits of parameters	
+				checkLimits();
+				break;
 		}
 		
 		pc.printf("_________________________________________________________");
@@ -211,23 +224,18 @@ int main() {
 		
 		
 		//If the state is the normal one, then store the measured values
-		if (state == NORMAL){
+		if ((state == NORMAL) || (state == ADVANCED)){
 			//Save the values
-			temperatureArray[ind] = temperature;
-			humidityArray[ind] = humidity;
-			moistureArray[ind] = valueSM;
-			lightArray[ind] = valueLS;
-			colorArray[ind] = RGB.read();
-			accelerometerXArray[ind] = accX;
-			accelerometerYArray[ind] = accY;
-			accelerometerZArray[ind] = accZ;
-			ind = (ind+1)%MAX_LENGTH;
-			
-			//Check the limits of parameters
-			checkLimits();
+				temperatureArray[ind] = temperature;
+				humidityArray[ind] = humidity;
+				moistureArray[ind] = valueSM;
+				lightArray[ind] = valueLS;
+				colorArray[ind] = RGB.read();
+				accelerometerXArray[ind] = accX;
+				accelerometerYArray[ind] = accY;
+				accelerometerZArray[ind] = accZ;
+				ind = (ind+1)%MAX_LENGTH;
 		}
-			
-			
 		
 		if (flagPresentNomalModeInfo) {
 			//Send information to serial port
@@ -363,8 +371,24 @@ void UTC2LocalTime(){
 	hour ++;
 }
 
+void checkLimitsNM(){
+
+	//used for normal mode, the led can alert of at most one parameter out of limits
+	if ((temperature >= MAX_TEMP) || (temperature <= MIN_TEMP)){pc.printf("\n\nTemperature out of limits \r\n"); RGB = RED_ON;}			
+	if ((humidity >= MAX_HUM) || (humidity <= MIN_HUM)) {pc.printf("Humidity out of limits\r\n"); RGB = GREEN_ON;}
+			if ((valueSM >= MAX_MOIS) || (valueSM < MIN_MOIS)) {pc.printf("Moisture out of limits\r\n"); RGB = BLUE_ON;}
+			if ((valueLS >= MAX_LIGHT) || (valueLS <= MIN_LIGHT)) {pc.printf("Light out of limits\r\n"); RGB = YELLOW_ON;}
+			if ((clear >= MAX_COLOR) || (clear <= MIN_COLOR) || 
+					(red >= MAX_COLOR) || (red <= MIN_COLOR) ||
+					(blue >= MAX_COLOR) || (blue <= MIN_COLOR) ||
+					(green >= MAX_COLOR) || (green <= MIN_COLOR))  {pc.printf("Color out of limits\r\n"); RGB = MAGENTA_ON;}
+			if ((accX >= MAX_ACC) || (accX <= MIN_ACC) ||
+					(accY >= MAX_ACC) || (accY <= MIN_ACC) ||
+					(accZ >= MAX_ACC) || (accZ <= MIN_ACC) ) {pc.printf("Acceleration out of limits\r\n"); RGB = CYAN_ON;}
+}
 
 void checkLimits(){
+	//Used in advanced mode, the led can present all the parameters that are out of limits
 	uint32_t flagsLimits = 0x0;
 	
 	if ((temperature >= MAX_TEMP) || (temperature <= MIN_TEMP)){pc.printf(COLOR_ANSI_RED "Temperature out of limits" COLOR_RESET "\r\n"); flagsLimits+=2;}			

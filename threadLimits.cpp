@@ -17,9 +17,9 @@ void limits_thread()
 	int wait_time;
 	
 	while (true) {
+		//Wait until one of the limits is activated
 		flags = event.wait_any(0x7F, osWaitForever, false);
 		
-		//flags = event.get();
 		wait_time = determineWaitTime(flags);
 		
 		if(flags & 64){//check accelerometer flag
